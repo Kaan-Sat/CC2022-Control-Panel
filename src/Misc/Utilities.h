@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 Alex Spataru <https://github.com/alex-spataru>
+ * Copyright (c) 2020-2022 Alex Spataru <https://github.com/alex-spataru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,17 +41,17 @@ class Utilities : public QObject
 
 public:
     // clang-format off
-    static Utilities &getInstance();
-    static int showMessageBox(const QString &text,
-                              const QString &informativeText,
-                              const QString &windowTitle = qAppName(),
-                              QMessageBox::StandardButtons bt = QMessageBox::Ok);
+    static Utilities &instance();
+    static void rebootApplication();
+    Q_INVOKABLE bool askAutomaticUpdates();
+    static int showMessageBox(const QString &text, 
+                              const QString &informativeText = "",
+                              const QString &windowTitle = "",
+                              const QMessageBox::StandardButtons &bt = QMessageBox::Ok);
     //clang-format on
 
-public slots:
+public Q_SLOTS:
     static void aboutQt();
-    static void openLogFile();
-    static void configureDarkUi();
     static void revealFile(const QString& pathToReveal);
 };
 }

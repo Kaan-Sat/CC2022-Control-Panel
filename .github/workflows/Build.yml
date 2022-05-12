@@ -18,27 +18,31 @@ on:
 
 env:
   VERSION: "1.0.0"
-  EXECUTABLE: "QtApp"
-  APPLICATION: "Qt App"
-  REPO_NAME: "QtApp-Template"
-  UNIXNAME: "qt-app"
-  QMAKE_PROJECT: "QtApp.pro"
+  EXECUTABLE: "CC2022"
+  APPLICATION: "CC2022"
+  UNIXNAME: "cc2022"
+  QMAKE_PROJECT: "CC2022.pro"
   QML_DIR_NIX: "assets/qml"
   QML_DIR_WIN: "assets\\qml"
   PUBLISHER: "Alex Spataru"
-  QT_VERSION: 5.15.2
-  QMAKE: qmake
-  CORES: 12
+  REPO_DIR: "/home/runner/work/CC2022"
+  QT_VERSION: 6.3.0
+  QMAKE: qmake6
+  CORES: 16
 
 #--------------------------------------------------------------------------------
 # Workflow jobs (GNU/Linux, macOS & Windows)
 #--------------------------------------------------------------------------------
 
 jobs:
+  #
+  # GNU/Linux build
+  #
   build-linux:
     runs-on: ubuntu-20.04
     name: '🐧 Ubuntu 20.04'
     steps:
+
     - name: '🧰 Checkout'
       uses: actions/checkout@v2
       with:
@@ -55,12 +59,10 @@ jobs:
       uses: jurplel/install-qt-action@v2
       with:
         version: ${{env.QT_VERSION}}
-        modules: ${{env.QT_MODULES}}
+        modules: qtserialport qt5compat qtconnectivity
         aqtversion: '==2.0.0'
         cached: ${{steps.cache-qt.outputs.cache-hit}}
 
-    # Install additional dependencies, stolen from:
-    # https://github.com/mapeditor/tiled/blob/master/.github/workflows/packages.yml
     - name: '⚙️ Install dependencies'
       run: |
         sudo apt-get update
@@ -68,8 +70,8 @@ jobs:
 
     - name: '🚧 Compile application'
       run: |
-        ${{env.QMAKE}} ${{env.QMAKE_PROJECT}} CONFIG+=release PREFIX=/usr
-        make -j${{env.CORES}}
+          ${{env.QMAKE}} ${{env.QMAKE_PROJECT}} CONFIG+=release PREFIX=/usr
+          make -j${{env.CORES}}
 
     - name: '⚙️ Install linuxdeploy'
       run: |
@@ -81,8 +83,8 @@ jobs:
     - name: '📦 Create AppImage'
       run: |
         export QML_SOURCES_PATHS="${{env.QML_DIR_NIX}}"
-        export QMAKE=/home/runner/work/${{env.REPO_NAME}}/Qt/${{env.QT_VERSION}}/gcc_64/bin/${{env.QMAKE}}
-        export PATH=/home/runner/work/${{env.REPO_NAME}}/Qt/${{env.QT_VERSION}}/gcc_64/libexec:$PATH
+        export QMAKE=${{env.REPO_DIR}}/Qt/${{env.QT_VERSION}}/gcc_64/bin/${{env.QMAKE}}
+        export PATH=${{env.REPO_DIR}}/Qt/${{env.QT_VERSION}}/gcc_64/libexec:$PATH
         ./linuxdeploy-x86_64.AppImage --appdir AppDir -e ${{env.UNIXNAME}} -i deploy/linux/${{env.UNIXNAME}}.png -d deploy/linux/${{env.UNIXNAME}}.desktop --plugin qt --output appimage
         rm linuxdeploy-x86_64.AppImage
         rm linuxdeploy-plugin-qt-x86_64.AppImage
@@ -94,10 +96,12 @@ jobs:
         name: ${{env.EXECUTABLE}}-${{env.VERSION}}-Linux.AppImage
         path: ${{env.EXECUTABLE}}-${{env.VERSION}}-Linux.AppImage
 
+  #
   # macOS build
+  #
   build-mac:
-    runs-on: macos-latest
-    name: '🍎 macOS'
+    runs-on: macos-12
+    name: '🍎 macOS Monterey'
     steps:
 
     - name: '🧰 Checkout'
@@ -116,23 +120,20 @@ jobs:
       uses: jurplel/install-qt-action@v2
       with:
         version: ${{env.QT_VERSION}}
-        modules: ${{env.QT_MODULES}}
+        modules: qtserialport qt5compat qtconnectivity
         aqtversion: '==2.0.0'
         cached: ${{steps.cache-qt.outputs.cache-hit}}
 
     - name: '🚧 Compile application'
       run: |
-        ${{env.QMAKE}} ${{env.QMAKE_PROJECT}} CONFIG+=release PREFIX=/usr
-        make -j${{env.CORES}}
+           ${{env.QMAKE}} ${{env.QMAKE_PROJECT}} CONFIG+=release PREFIX=/usr
+           make -j${{env.CORES}}
 
     - name: '📦 Package application (macdeployqt and zipfile)'
       run: |
         macdeployqt ${{env.EXECUTABLE}}.app -qmldir="${{env.QML_DIR_NIX}}"
-        #mv "${{env.EXECUTABLE}}.app" "${{env.APPLICATION}}.app"
-
-        # ZIP application "%AppName%-%Version%-macOS.zip"
-        # We use ditto instead of zip to use the same commands as Finder
-        ditto -c -k --sequesterRsrc --keepParent "${{env.EXECUTABLE}}.app" ${{env.EXECUTABLE}}-${{env.VERSION}}-macOS.zip
+        mv "${{env.EXECUTABLE}}.app" "${{env.APPLICATION}}.app"
+        ditto -c -k --sequesterRsrc --keepParent "${{env.APPLICATION}}.app" ${{env.EXECUTABLE}}-${{env.VERSION}}-macOS.zip
 
     - name: '📤 Upload artifact: ZIP'
       uses: actions/upload-artifact@v2
@@ -140,10 +141,12 @@ jobs:
         name: ${{env.EXECUTABLE}}-${{env.VERSION}}-macOS.zip
         path: ${{env.EXECUTABLE}}-${{env.VERSION}}-macOS.zip
 
+  #
   # Windows build
+  #
   build-windows:
-    runs-on: windows-latest
-    name: '🧊 Windows'
+    runs-on: windows-2022
+    name: '🧊 Windows Server 2022'
     steps:
 
     - name: '🧰 Checkout'
@@ -168,7 +171,7 @@ jobs:
       uses: jurplel/install-qt-action@v2
       with:
         version: ${{env.QT_VERSION}}
-        modules: ${{env.QT_MODULES}}
+        modules: qtserialport qt5compat qtconnectivity
         aqtversion: '==2.0.0'
         cached: ${{steps.cache-qt.outputs.cache-hit}}
 
@@ -177,7 +180,6 @@ jobs:
         ${{env.QMAKE}} ${{env.QMAKE_PROJECT}} CONFIG+=release PREFIX=/usr
         nmake
 
-    # Copy Qt DLLs, compiler runtime & application icon
     - name: '📦 Package application (windeployqt)'
       run: |
         mkdir bin
@@ -207,7 +209,106 @@ jobs:
         name: ${{env.EXECUTABLE}}-${{env.VERSION}}-Windows.exe
         path: deploy/windows/nsis/${{env.EXECUTABLE}}-${{env.VERSION}}-Windows.exe
 
+  #
+  # Windows MSYS2 build
+  #
+  msys2-makepkg:
+    if: ${{false}}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { icon: '🟪', msystem: MINGW64, arch: x86_64 }
+          - { icon: '🟦', msystem: MINGW32, arch: i686   }
+    name:  ${{ matrix.icon }} ${{ matrix.msystem }} | ${{ matrix.arch }} | makepkg
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+
+    - run: git config --global core.autocrlf input
+      shell: bash
+
+    - name: '🧰 Checkout'
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: '${{ matrix.icon }} Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.msystem }}
+        update: true
+        install: >
+          base-devel
+          mingw-w64-${{ matrix.arch }}-toolchain
+
+    - name: '🚧 Build'
+      run: |
+        cd msys2
+        tries=0
+        # Try building three times due to the arbitrary 'Bad address' error
+        while [ $tries -lt 3 ]; do
+          makepkg-mingw --noconfirm --noprogressbar -sCLf && break || tries=$((tries+1))
+        done
+
+      env:
+        MINGW_INSTALLS: ${{ matrix.msystem }}
+
+    - name: '📤 Upload artifact: MSYS2 ${{ matrix.arch }} package'
+      uses: actions/upload-artifact@v2
+      with:
+        name: msys2-pkgs
+        path: msys2/*.zst
+
+  # Test Windows MSYS2 packages
+  msys2-test:
+    if: ${{false}}
+    needs: msys2-makepkg
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { icon: '🟪', msystem: MINGW64, arch: x86_64 }
+          - { icon: '🟦', msystem: MINGW32, arch: i686   }
+    name: ${{ matrix.icon }} ${{ matrix.msystem }} | ${{ matrix.arch }} | Test
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+
+    - name: '${{ matrix.icon }} Setup MSYS2'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{ matrix.msystem }}
+        update: true
+        install: >
+          tree
+          tar
+          zstd
+
+    - name: '📥 Download artifacts: MSYS2 packages'
+      uses: actions/download-artifact@v2
+      with:
+        name: msys2-pkgs
+
+    - name: 'Install MSYS2 package'
+      run: |
+        pacman -U --noconfirm --noprogressbar *${{ matrix.arch }}*.zst
+
+    - name: 'List contents of package'
+      run: |
+        mkdir tmp
+        cd tmp
+        /usr/bin/tar xf ../*${{ matrix.arch }}*.zst
+        tree ${{ matrix.msystem }}
+  
+  #
   # Upload continuous build
+  #
   upload:
       name: '🗂 Create release and upload artifacts'
       needs:
@@ -229,4 +330,3 @@ jobs:
             ./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-Linux.AppImage
             ./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-macOS.zip
             ./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-Windows.exe
-

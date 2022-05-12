@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 Alex Spataru <https://github.com/alex-spataru>
+ * Copyright (c) 2020-2022 Alex Spataru <https://github.com/alex-spataru>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,29 +20,59 @@
  * THE SOFTWARE.
  */
 
-#include "Utilities.h"
-
 #include <QDir>
 #include <QUrl>
 #include <QPalette>
 #include <QProcess>
 #include <QFileInfo>
-#include <QQuickStyle>
 #include <QMessageBox>
 #include <QApplication>
-#include <QStyleFactory>
 #include <QAbstractButton>
 #include <QDesktopServices>
 
 #include <AppInfo.h>
+#include <Misc/Utilities.h>
 
 /**
- * Returns the onlt instance of the class, this is to be used by the QML interface
+ * Returns a pointer to the only instance of the class
  */
-Misc::Utilities &Misc::Utilities::getInstance()
+Misc::Utilities &Misc::Utilities::instance()
 {
-    static Utilities instance;
-    return instance;
+    static Utilities singleton;
+    return singleton;
+}
+
+/**
+ * Restarts the application - with macOS specific code to make it work
+ */
+void Misc::Utilities::rebootApplication()
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    qApp->exit();
+    QProcess::startDetached(qApp->arguments().first(), qApp->arguments());
+#else
+#    ifdef Q_OS_MAC
+    auto bundle = qApp->applicationDirPath() + "/../../";
+    QProcess::startDetached("open", { "-n", "-a", bundle });
+#    else
+    QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
+#    endif
+    qApp->exit();
+#endif
+}
+
+/**
+ * Asks the user if he/she wants the application to check for updates automatically
+ */
+bool Misc::Utilities::askAutomaticUpdates()
+{
+    const int result = showMessageBox(tr("Check for updates automatically?"),
+                                      tr("Should %1 automatically check for updates? "
+                                         "You can always check for updates manually from "
+                                         "the \"Help\" menu")
+                                          .arg(APP_NAME),
+                                      APP_NAME, QMessageBox::Yes | QMessageBox::No);
+    return result == QMessageBox::Yes;
 }
 
 /**
@@ -50,11 +80,14 @@ Misc::Utilities &Misc::Utilities::getInstance()
  */
 int Misc::Utilities::showMessageBox(const QString &text, const QString &informativeText,
                                     const QString &windowTitle,
-                                    QMessageBox::StandardButtons bt)
+                                    const QMessageBox::StandardButtons &bt)
 {
     // Get app icon
-    auto icon = QPixmap(APP_ICON).scaled(64, 64, Qt::IgnoreAspectRatio,
-                                         Qt::SmoothTransformation);
+    QPixmap icon;
+    if (qApp->devicePixelRatio() >= 2)
+        icon.load(":/images/icon-small@2x.png");
+    else
+        icon.load(":/images/icon-small@1x.png");
 
     // Create message box & set options
     QMessageBox box;
@@ -112,41 +145,6 @@ int Misc::Utilities::showMessageBox(const QString &text, const QString &informat
 void Misc::Utilities::aboutQt()
 {
     qApp->aboutQt();
-}
-
-/**
- * Displays the location of the current log file in the Finder window
- */
-void Misc::Utilities::openLogFile()
-{
-    revealFile(LOG_FILE);
-}
-
-/**
- * Changes the application palette so that a dark UI can be displayed
- */
-void Misc::Utilities::configureDarkUi()
-{
-    qApp->setStyle(QStyleFactory::create("Fusion"));
-    QQuickStyle::setStyle("Fusion");
-
-    // clang-format off
-    QPalette palette;
-    palette.setColor(QPalette::Base,            QColor("#21373f"));
-    palette.setColor(QPalette::Link,            QColor("#409da0"));
-    palette.setColor(QPalette::Button,          QColor("#21373f"));
-    palette.setColor(QPalette::Window,          QColor("#21373f"));
-    palette.setColor(QPalette::Text,            QColor("#ffffff"));
-    palette.setColor(QPalette::Midlight,        QColor("#0e1419"));
-    palette.setColor(QPalette::Highlight,       QColor("#409da0"));
-    palette.setColor(QPalette::BrightText,      QColor("#ffffff"));
-    palette.setColor(QPalette::ButtonText,      QColor("#ffffff"));
-    palette.setColor(QPalette::WindowText,      QColor("#ffffff"));
-    palette.setColor(QPalette::ToolTipBase,     QColor("#e6e0b2"));
-    palette.setColor(QPalette::ToolTipText,     QColor("#e6e0b2"));
-    palette.setColor(QPalette::HighlightedText, QColor("#e6e0b2"));
-    qApp->setPalette(palette);
-    // clang-format on
 }
 
 /**

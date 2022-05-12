@@ -14,7 +14,7 @@ CONFIG += c++11
 #-------------------------------------------------------------------------------
 
 TEMPLATE = app
-TARGET = QtApp
+TARGET = CC2022
 
 CONFIG += qtc_runnable
 CONFIG += resources_big
@@ -31,6 +31,12 @@ QT += quickcontrols2
 QTPLUGIN += qsvg
 
 #-------------------------------------------------------------------------------
+# Add libraries
+#-------------------------------------------------------------------------------
+
+include($$PWD/libs/Libraries.pri)
+
+#-------------------------------------------------------------------------------
 # Compiler options
 #-------------------------------------------------------------------------------
 
@@ -43,12 +49,6 @@ QTPLUGIN += qsvg
     QMAKE_CXXFLAGS_RELEASE -= /O
     QMAKE_CXXFLAGS_RELEASE *= /O2
 }
-    
-#-------------------------------------------------------------------------------
-# Libraries
-#-------------------------------------------------------------------------------
-
-include(libs/Libraries.pri)
 
 #-------------------------------------------------------------------------------
 # Deploy options
@@ -56,6 +56,7 @@ include(libs/Libraries.pri)
 
 win32* {
     RC_FILE = deploy/windows/resources/info.rc
+    OTHER_FILES += deploy/windows/nsis/setup.nsi
 }
 
 macx* {
@@ -66,12 +67,10 @@ macx* {
 }
 
 linux:!android {
-    TARGET = qt-app
-
     target.path = /usr/bin
     icon.path = /usr/share/pixmaps
     desktop.path = /usr/share/applications
-    icon.files += deploy/linux/*.png
+    icon.files += deploy/linux/*.svg
     desktop.files += deploy/linux/*.desktop
 
     INSTALLS += target desktop icon
@@ -89,27 +88,26 @@ RESOURCES += \
 DISTFILES += \
     assets/qml/*.qml
 
-TRANSLATIONS += \
-    assets/translations/en.ts \
-    assets/translations/es.ts \
-    assets/translations/zh.ts
-
 HEADERS += \
     src/AppInfo.h \
     src/Misc/Utilities.h \
-    src/Misc/Translator.h
+    src/Misc/TimerEvents.h \
+    src/SerialStudio/Communicator.h
 
 SOURCES += \
+    src/main.cpp \
     src/Misc/Utilities.cpp \
-    src/Misc/Translator.cpp \
-    src/main.cpp
+    src/Misc/TimerEvents.cpp \
+    src/SerialStudio/Communicator.cpp
 
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------
 # Deploy files
-#-------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------
 
 OTHER_FILES += \
     deploy/linux/* \
     deploy/macOS/* \
     deploy/windows/nsis/* \
-    deploy/windows/resources/*
+    deploy/windows/resources/* \
+    .github/workflows/*.yml \
+    updates.json

@@ -20,147 +20,264 @@
  * THE SOFTWARE.
  */
 
-import QtQuick 2.12
-import QtQuick.Dialogs 1.1
-import QtQuick.Layouts 1.12
-import QtQuick.Controls 2.12
+import QtQuick
+import QtQuick.Dialogs
+import QtQuick.Layouts
+import QtQuick.Controls
 
 Page {
     id: root
 
     //
-    // Toolbar with buttons
+    // Background
     //
-    header: ToolBar {
-        height: 48
-
-        //
-        // Background gradient
-        //
-        Rectangle {
-            border.width: 1
-            border.color: palette.midlight
-
-            gradient: Gradient {
-                GradientStop { position: 0; color: "#21373f" }
-                GradientStop { position: 1; color: "#11272f" }
-            }
-
-            anchors {
-                fill: parent
-                topMargin: -border.width
-                leftMargin: -border.width * 10
-                rightMargin: -border.width * 10
-            }
+    background: Item {
+        Image {
+            id: img
+            opacity: 0.72
+            anchors.fill: parent
+            fillMode: Image.PreserveAspectCrop
+            source: "qrc:/images/background.jpg"
         }
 
-        //
-        // Toolbar controls
-        //
-        RowLayout {
-            spacing: app.spacing
+        Rectangle {
             anchors.fill: parent
-            anchors.margins: app.spacing
+            gradient: Gradient {
+                GradientStop {
+                    position: 1
+                    color: "#80140042"
+                }
 
-            Button {
-                flat: true
-                icon.width: 24
-                icon.height: 24
-                Layout.fillHeight: true
-                icon.color: palette.text
-                icon.source: "qrc:/icons/update.svg"
-                text: qsTr("Check for updates")
-                onClicked: {
-                    Cpp_Updater.setNotifyOnFinish(Cpp_AppUpdaterUrl, true)
-                    Cpp_Updater.checkForUpdates(Cpp_AppUpdaterUrl)
+                GradientStop {
+                    position: 0
+                    color: "#80000000"
                 }
             }
+        }
+    }
 
-            Button {
-                flat: true
-                icon.width: 24
-                icon.height: 24
-                Layout.fillHeight: true
-                icon.color: palette.text
-                icon.source: "qrc:/icons/bug.svg"
-                text: qsTr("Application log")
-                onClicked: Cpp_Misc_Utilities.openLogFile()
-            }
+    //
+    // Toolbar
+    //
+    RowLayout {
+        id: toolbar
 
-            Item {
-                Layout.fillWidth: true
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            margins: app.spacing
+        }
+
+        ColumnLayout {
+            spacing: app.spacing
+            Layout.alignment: Qt.AlignVCenter
+
+            Image {
+                opacity: 0.8
+                sourceSize.width: 240
+                source: "qrc:/images/kaansat.svg"
+                Layout.alignment: Qt.AlignVCenter
             }
 
             Label {
-                Layout.alignment: Qt.AlignVCenter
-                text: qsTr("Language") + ":"
+                opacity: 0.6
+                font.pixelSize: 10
+                text: Cpp_AppName + " v" + Cpp_AppVersion
             }
-
-            ComboBox {
-                Layout.alignment: Qt.AlignVCenter
-                model: Cpp_Misc_Translator.availableLanguages
-                onCurrentIndexChanged: Cpp_Misc_Translator.setLanguage(currentIndex)
-            }
-        }
-    }
-
-    //
-    // Background color
-    //
-    background: Rectangle {
-        color: app.windowBackgroundColor
-    }
-
-    //
-    // Image, labels & buttons
-    //
-    ColumnLayout {
-        spacing: app.spacing
-        anchors.centerIn: parent
-
-        Image {
-            source: Cpp_AppIcon
-            sourceSize: Qt.size(256, 188)
-            Layout.alignment: Qt.AlignHCenter
         }
 
         Item {
-            Layout.minimumHeight: app.spacing
+            Layout.fillWidth: true
         }
 
         Label {
             font.bold: true
-            font.pixelSize: 24
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("Hello World")
-        }
-
-        Label {
-            font.pixelSize: 18
-            Layout.alignment: Qt.AlignHCenter
-            text: qsTr("Click on any button")
+            font.pixelSize: 22
+            font.family: app.monoFont
+            Layout.alignment: Qt.AlignVCenter
+            text: Cpp_SerialStudio_Communicator.currentTime
         }
 
         Item {
-            Layout.minimumHeight: app.spacing
+            Layout.fillWidth: true
         }
 
-        Button {
-            icon.color: palette.text
-            Layout.minimumWidth: 156
-            Layout.alignment: Qt.AlignHCenter
-            icon.source: "qrc:/icons/close.svg"
-            text: qsTr("Close")
-            onClicked: app.close()
+        Label {
+            Layout.alignment: Qt.AlignVCenter
+            text: qsTr("Serial Studio Connection")
         }
 
-        Button {
-            icon.color: palette.text
-            Layout.minimumWidth: 156
-            Layout.alignment: Qt.AlignHCenter
-            icon.source: "qrc:/icons/website.svg"
-            text: qsTr("Visit website")
-            onClicked: Qt.openUrlExternally(Cpp_AppOrganizationDomain)
+        Switch {
+            Layout.alignment: Qt.AlignVCenter
+            checked: Cpp_SerialStudio_Communicator.connectedToSerialStudio
+
+            MouseArea {
+                anchors.fill: parent
+            }
         }
+    }
+
+    //
+    // User interface
+    //
+    ColumnLayout {
+        anchors.fill: parent
+        spacing: app.spacing
+        anchors.margins: 2 * app.spacing
+        anchors.topMargin: 3 * app.spacing + toolbar.height
+
+        //
+        // CSV controls
+        //
+        RowLayout {
+            spacing: app.spacing
+            Layout.fillWidth: true
+
+            Button {
+                icon.width: 24
+                icon.height: 24
+                Layout.fillWidth: true
+                icon.source: "qrc:/icons/cog.svg"
+                text: qsTr("Open simulation CSV")
+                onClicked: Cpp_SerialStudio_Communicator.openCsv()
+            }
+
+            Label {
+                Layout.fillWidth: true
+                verticalAlignment: Label.AlignVCenter
+                horizontalAlignment: Label.AlignHCenter
+                text: "<" + Cpp_SerialStudio_Communicator.csvFileName + ">"
+            }
+        }
+
+        //
+        // Console display
+        //
+        ScrollView {
+            id: scrollView
+            clip: true
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            contentWidth: parent.width
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+            TextArea {
+                id: textArea
+                readOnly: true
+                color: "#72d5a3"
+                font.pixelSize: 12
+
+                font.family: app.monoFont
+                textFormat: Text.PlainText
+                width: scrollView.contentWidth
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                placeholderText: qsTr("No data received so far") + "..."
+
+                Connections {
+                    target: Cpp_SerialStudio_Communicator
+                    function onRx(data) {
+                        textArea.text += data
+                    }
+                }
+
+                background: Rectangle {
+                    border.width: 1
+                    color: "#aa000000"
+                    border.color: "#44bebebe"
+                }
+
+                onTextChanged: {
+                    if (scrollView.contentHeight > scrollView.height)
+                        textArea.cursorPosition = textArea.length - 1
+                }
+            }
+        }
+
+        //
+        // Buttons
+        //
+        GridLayout {
+            id: grid
+            columns: 2
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            rowSpacing: app.spacing
+            columnSpacing: app.spacing
+
+            Button {
+                id: simModeEnabled
+                text: qsTr("Simulation mode")
+
+                checked: Cpp_SerialStudio_Communicator.simulationEnabled
+                enabled: Cpp_SerialStudio_Communicator.connectedToSerialStudio
+                onClicked: Cpp_SerialStudio_Communicator.simulationEnabled = !Cpp_SerialStudio_Communicator.simulationEnabled
+
+                icon.width: 42
+                icon.height: 42
+                font.pixelSize: 16
+                icon.source: "qrc:/icons/simulation.svg"
+
+                Layout.fillWidth: true
+                Layout.minimumHeight: 64
+                Layout.maximumHeight: 64
+            }
+
+            Button {
+                id: activateSimMode
+                text: qsTr("Activate simulation mode")
+
+                enabled: simModeEnabled.checked && simModeEnabled.enabled
+                checked: Cpp_SerialStudio_Communicator.simulationActivated
+                onClicked: Cpp_SerialStudio_Communicator.simulationActivated = !Cpp_SerialStudio_Communicator.simulationActivated
+
+                icon.width: 42
+                icon.height: 42
+                font.pixelSize: 16
+                icon.source: "qrc:/icons/start.svg"
+
+                Layout.fillWidth: true
+                Layout.minimumHeight: 64
+                Layout.maximumHeight: 64
+            }
+
+            Button {
+                id: telemetryEnabled
+
+                text: qsTr("Container telemetry")
+
+                enabled: Cpp_SerialStudio_Communicator.connectedToSerialStudio
+                checked: Cpp_SerialStudio_Communicator.containerTelemetryEnabled
+                onClicked: Cpp_SerialStudio_Communicator.containerTelemetryEnabled = !Cpp_SerialStudio_Communicator.containerTelemetryEnabled
+
+                icon.width: 42
+                icon.height: 42
+                font.pixelSize: 16
+                icon.source: checked ? "qrc:/icons/telemetry-on.svg" :
+                                       "qrc:/icons/telemetry-off.svg"
+
+                Layout.fillWidth: true
+                Layout.minimumHeight: 64
+                Layout.maximumHeight: 64
+            }
+
+            Button {
+                id: updateTime
+                text: qsTr("Update container time")
+
+                onClicked: Cpp_SerialStudio_Communicator.updateContainerTime()
+                enabled: Cpp_SerialStudio_Communicator.connectedToSerialStudio
+
+                icon.width: 42
+                icon.height: 42
+                font.pixelSize: 16
+                icon.source: "qrc:/icons/time.svg"
+
+                Layout.fillWidth: true
+                Layout.minimumHeight: 64
+                Layout.maximumHeight: 64
+            }
+        }
+
     }
 }

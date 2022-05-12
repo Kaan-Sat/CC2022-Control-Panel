@@ -1,12 +1,2 @@
-#-------------------------------------------------------------------------------
-# Definitions to avoid adding DLL imports/exports
-#-------------------------------------------------------------------------------
-
-DEFINES += CUTELOGGER_SRC
-
-#-------------------------------------------------------------------------------
-# Include *.pri files
-#-------------------------------------------------------------------------------
-
-include($$PWD/CuteLogger/CuteLogger.pri)
-include($$PWD/QSimpleUpdater/QSimpleUpdater.pri)
+DEFINES += QTCSV_STATIC_LIB
+include($$PWD/qtcsv/qtcsv.pri)
