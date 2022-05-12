@@ -188,7 +188,7 @@ void SerialStudio::Communicator::openCsv()
         // Read CSV data
         if (m_tempFile.open(QFile::ReadOnly))
         {
-            m_row = 0;
+            m_row = 1;
             m_csvData = QtCSV::Reader::readToList(m_tempFile);
         }
     }
@@ -311,15 +311,8 @@ void SerialStudio::Communicator::sendSimulatedData()
         auto row = m_csvData.at(m_row);
 
         // Generate row string
-        QString cmd = "";
-        for (int i = 0; i < row.count(); ++i)
-        {
-            cmd.append(row.at(i));
-            cmd.append(",");
-        }
-
-        // Remove last "," from command string & add ";"
-        cmd.chop(1);
+        QString cmd = "CMD,1026,SIMP,";
+        cmd.append(row.first());
         cmd.append(";");
 
         // Send command
@@ -383,8 +376,8 @@ bool SerialStudio::Communicator::sendData(const QString &data)
 
     // Define Xbee 64-bit address
     QByteArray address64bit;
-    address64bit.append((quint8)0x7D); // 0x00
-    address64bit.append((quint8)0x33); // 0x13
+    address64bit.append((quint8)0x00); // 0x00
+    address64bit.append((quint8)0x13); // 0x13
     address64bit.append((quint8)0xA2);
     address64bit.append((quint8)0x00);
     address64bit.append((quint8)0x41);
@@ -411,31 +404,33 @@ bool SerialStudio::Communicator::sendData(const QString &data)
     frame.append(data.toUtf8());
 
     // Calculate sum
-    int sum = 0;
+    quint16 sum = 0;
     for (auto i = 0; i < frame.length(); ++i)
         sum += (quint8)frame[i];
 
     // Calculate checksum
-    quint8 crc = 0xFF - (sum & 0xFF);
+    quint8 crc = 0xff - ((sum)&0xFF);
 
     // Calculate frame length
-    quint16 length = frame.length();
+    quint16 length = frame.length() - 1;
+
+    // Cambiar primeros dos bytes de la direccion de 64 bits
+    QByteArray msbAddress;
+    msbAddress.append((quint8)0x7D);
+    msbAddress.append((quint8)0x33);
+    frame = frame.replace(3, 2, msbAddress);
 
     // Generate full frame
     QByteArray apiFrame;
     apiFrame.append((quint8)0x7E);
-    apiFrame.append((quint8)((length - 6) >> 8) & 0xff);
-    apiFrame.append((quint8)((length - 6) >> 0) & 0xff);
+    apiFrame.append((quint8)((length) >> 8) & 0xff);
+    apiFrame.append((quint8)((length) >> 0) & 0xff);
     apiFrame.append(frame);
     apiFrame.append((quint8)crc);
 
     // Send data to Serial Studio
     auto bytes = m_socket.write(apiFrame);
-
-    // Update UI
-    auto sentData = apiFrame;
-    sentData.chop(apiFrame.length() - bytes);
-    emit rx("TX: " + QString::fromUtf8(sentData.toHex()) + "\n");
+    Q_EMIT rx("TX: " + data + "\n");
 
     // Return operation status
     return bytes == apiFrame.length();
