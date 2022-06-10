@@ -6,7 +6,7 @@
 
 [![Deploy](https://github.com/Kaan-Sat/CC2022-Control-Panel/actions/workflows/Build.yml/badge.svg)](https://github.com/Kaan-Sat/CC2022-Control-Panel/actions/workflows/Build.yml)
 
-Serial Studio companion application that allows users to send simulated pressure data to the CanSat container & control scientific payload operations.
+Serial Studio companion application that allows users to send simulated pressure data to the CanSat container & control containter operations.
 
 ![Screenshot](doc/screenshot.png)
 
