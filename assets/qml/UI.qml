@@ -172,8 +172,8 @@ Page {
                 textFormat: Text.PlainText
                 width: scrollView.contentWidth
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                text: qsTr(" Welcome to %1 v%2!\n").arg(Cpp_AppName).arg(Cpp_AppVersion) +
-                      qsTr(" Copyright (c) 2022 the Ka'an Sat Team. Released under the MIT license.\n\n")
+                text: qsTr(" Welcome to the %1 v%2!\n").arg(Cpp_AppName).arg(Cpp_AppVersion) +
+                      qsTr(" Copyright (c) 2022 the Ka'an Sat Team. Released under the MIT License.\n\n")
 
                 Connections {
                     target: Cpp_CanSat_ControlPanel
