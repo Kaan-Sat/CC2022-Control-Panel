@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "Communicator.h"
+#include "ControlPanel.h"
 
 #include <QDir>
 #include <QTimer>
@@ -28,22 +28,17 @@
 #include <QJsonArray>
 #include <QFileDialog>
 #include <QJsonObject>
-#include <QHostAddress>
 #include <QJsonDocument>
 
 #include <qtcsv/reader.h>
 #include <Misc/Utilities.h>
 #include <Misc/TimerEvents.h>
-
-/*
- * Set TCP port to communicate with Serial Studio
- */
-#define SERIAL_STUDIO_PLUGINS_PORT 7777
+#include <SerialStudio/Plugin.h>
 
 /**
  * Constructor function
  */
-SerialStudio::Communicator::Communicator()
+CanSat::ControlPanel::ControlPanel()
 {
     // Set default values
     m_row = 0;
@@ -52,40 +47,30 @@ SerialStudio::Communicator::Communicator()
     m_simulationActivated = false;
     m_containerTelemetryEnabled = false;
 
-    // Connect socket signals/slots
-    connect(&m_socket, &QTcpSocket::disconnected, &m_socket, &QTcpSocket::close);
-    connect(&m_socket, &QTcpSocket::connected, this, &Communicator::onConnectedChanged);
-    connect(&m_socket, &QTcpSocket::disconnected, this,
-            &Communicator::onConnectedChanged);
-
     // Timer module signals/slots
     auto te = &(Misc::TimerEvents::instance());
-    connect(te, &Misc::TimerEvents::timeout1Hz, this, &Communicator::tryConnection);
-    connect(te, &Misc::TimerEvents::timeout1Hz, this, &Communicator::sendSimulatedData);
-    connect(te, &Misc::TimerEvents::timeout20Hz, this, &Communicator::updateCurrentTime);
+    connect(te, &Misc::TimerEvents::timeout20Hz, this,
+            &CanSat::ControlPanel::updateCurrentTime);
+
+    // Plugins comm signals/slots
+    auto pc = &(SerialStudio::Plugin::instance());
+    connect(pc, &SerialStudio::Plugin::dataReceived, this,
+            &CanSat::ControlPanel::onDataReceived);
 }
 
 /**
  * Returns a pointer to the only instance of the class
  */
-SerialStudio::Communicator &SerialStudio::Communicator::instance()
+CanSat::ControlPanel &CanSat::ControlPanel::instance()
 {
-    static Communicator singleton;
+    static ControlPanel singleton;
     return singleton;
-}
-
-/**
- * Returns @c true if the application is connected to the Serial Studio TCP server
- */
-bool SerialStudio::Communicator::connectedToSerialStudio() const
-{
-    return m_socket.state() == QTcpSocket::ConnectedState;
 }
 
 /**
  * Returns @c true if the simulation mode is enabled
  */
-bool SerialStudio::Communicator::simulationEnabled() const
+bool CanSat::ControlPanel::simulationEnabled() const
 {
     return m_simulationEnabled;
 }
@@ -93,7 +78,7 @@ bool SerialStudio::Communicator::simulationEnabled() const
 /**
  * Returns @c true if simulation mode is enabled & active
  */
-bool SerialStudio::Communicator::simulationActivated() const
+bool CanSat::ControlPanel::simulationActivated() const
 {
     return simulationEnabled() && m_simulationActivated;
 }
@@ -101,15 +86,23 @@ bool SerialStudio::Communicator::simulationActivated() const
 /**
  * Returns @c true if container telemetry is enabled
  */
-bool SerialStudio::Communicator::containerTelemetryEnabled() const
+bool CanSat::ControlPanel::containerTelemetryEnabled() const
 {
     return m_containerTelemetryEnabled;
 }
 
 /**
+ * Returns @c true if the simulation CSV file has been loaded
+ */
+bool CanSat::ControlPanel::simulationCsvLoaded() const
+{
+    return m_file.isOpen();
+}
+
+/**
  * Returns current time in hh:mm:ss:zzz format
  */
-QString SerialStudio::Communicator::currentTime() const
+QString CanSat::ControlPanel::currentTime() const
 {
     return m_currentTime;
 }
@@ -117,9 +110,9 @@ QString SerialStudio::Communicator::currentTime() const
 /**
  * Returns the name of the currently loaded CSV file
  */
-QString SerialStudio::Communicator::csvFileName() const
+QString CanSat::ControlPanel::csvFileName() const
 {
-    if (m_file.isOpen())
+    if (simulationCsvLoaded())
     {
         auto fileInfo = QFileInfo(m_file.fileName());
         return fileInfo.fileName();
@@ -132,7 +125,7 @@ QString SerialStudio::Communicator::csvFileName() const
  * Opens a dialog that allows the user to select a CSV file to load to the application.
  * The CSV file must contain only one column with simulated pressure data.
  */
-void SerialStudio::Communicator::openCsv()
+void CanSat::ControlPanel::openCsv()
 {
     // clang-format off
     auto name = QFileDialog::getOpenFileName(Q_NULLPTR,
@@ -191,6 +184,11 @@ void SerialStudio::Communicator::openCsv()
             m_row = 1;
             m_csvData = QtCSV::Reader::readToList(m_tempFile);
         }
+
+        // Update UI
+        Q_EMIT printLn("[INFO]\tLoaded simulation CSV file from " + m_file.fileName());
+        Q_EMIT printLn("[INFO]\tProcessed simulation CSV saved at "
+                       + m_tempFile.fileName());
     }
 
     // Open failure, alert user through a messagebox
@@ -202,23 +200,11 @@ void SerialStudio::Communicator::openCsv()
 }
 
 /**
- * Tries to establish a connection with Serial Studio's TCP server
- */
-void SerialStudio::Communicator::tryConnection()
-{
-    if (!connectedToSerialStudio())
-    {
-        m_socket.abort();
-        m_socket.connectToHost(QHostAddress::LocalHost, SERIAL_STUDIO_PLUGINS_PORT);
-    }
-}
-
-/**
  * Sends the current time to the payload with the hh:mm:ss format
  */
-void SerialStudio::Communicator::updateContainerTime()
+void CanSat::ControlPanel::updateContainerTime()
 {
-    if (connectedToSerialStudio())
+    if (SerialStudio::Plugin::instance().isConnected())
     {
         auto time = QDateTime::currentDateTime().toString("hh:mm:ss");
         sendData("CMD,1026,ST," + time + ";");
@@ -228,9 +214,9 @@ void SerialStudio::Communicator::updateContainerTime()
 /**
  * Enables/disables simulation mode
  */
-void SerialStudio::Communicator::setSimulationMode(const bool enabled)
+void CanSat::ControlPanel::setSimulationMode(const bool enabled)
 {
-    if (connectedToSerialStudio())
+    if (SerialStudio::Plugin::instance().isConnected())
     {
         m_simulationActivated = false;
         m_simulationEnabled = enabled;
@@ -248,15 +234,17 @@ void SerialStudio::Communicator::setSimulationMode(const bool enabled)
 /**
  * Activates/deactivates sending simulated pressure readings to the CanSat
  */
-void SerialStudio::Communicator::setSimulationActivated(const bool activated)
+void CanSat::ControlPanel::setSimulationActivated(const bool activated)
 {
-    if (connectedToSerialStudio() && simulationEnabled())
+    if (SerialStudio::Plugin::instance().isConnected() && simulationEnabled())
     {
-        if (activated)
+        if (activated && !csvFileName().isEmpty())
         {
             m_simulationActivated = true;
             emit simulationActivatedChanged();
             sendData("CMD,1026,SIM,ACTIVATE;");
+            Q_EMIT printLn("[INFO]\tWating 5 seconds before sending data...");
+            QTimer::singleShot(5000, this, SLOT(sendSimulatedData()));
         }
 
         else
@@ -267,9 +255,9 @@ void SerialStudio::Communicator::setSimulationActivated(const bool activated)
 /**
  * Enables/disables container telemetry
  */
-void SerialStudio::Communicator::setContainerTelemetryEnabled(const bool enabled)
+void CanSat::ControlPanel::setContainerTelemetryEnabled(const bool enabled)
 {
-    if (connectedToSerialStudio())
+    if (SerialStudio::Plugin::instance().isConnected())
     {
         m_containerTelemetryEnabled = enabled;
         emit containerTelemetryEnabledChanged();
@@ -283,10 +271,50 @@ void SerialStudio::Communicator::setContainerTelemetryEnabled(const bool enabled
 }
 
 /**
+ * Reads incoming data from Serial Studio
+ */
+void CanSat::ControlPanel::onDataReceived(const QByteArray &data)
+{
+    // Append data to buffer
+    m_dataBuffer.append(data);
+
+    // Read until start/finish combinations are not found
+    auto bytes = 0;
+    auto cursor = m_dataBuffer;
+    auto start = QString("/*").toUtf8();
+    auto finish = QString("*/").toUtf8();
+    while (cursor.contains(start) && cursor.contains(finish))
+    {
+        // Remove the part of the buffer prior to, and including, the start sequence.
+        auto sIndex = cursor.indexOf(start);
+        cursor = cursor.mid(sIndex + start.length(), -1);
+        bytes += sIndex + start.length();
+
+        // Copy a sub-buffer that goes until the finish sequence
+        auto fIndex = cursor.indexOf(finish);
+        auto frame = cursor.left(fIndex);
+
+        // Process frame data
+        processFrame(frame);
+
+        // Remove the data including the finish sequence from the master buffer
+        cursor = cursor.mid(fIndex, -1);
+        bytes += fIndex + finish.length();
+    }
+
+    // Remove parsed data from master buffer
+    m_dataBuffer.remove(0, bytes);
+
+    // Clear temp. buffer (e.g. device sends a lot of invalid data)
+    if (m_dataBuffer.size() > 1024 * 10 * 10)
+        m_dataBuffer.clear();
+}
+
+/**
  * Gets the current time in hh:mm:ss:zzz format. This value is used by the user interface,
  * not by the CanSat container.
  */
-void SerialStudio::Communicator::updateCurrentTime()
+void CanSat::ControlPanel::updateCurrentTime()
 {
     m_currentTime = QDateTime::currentDateTime().toString("hh:mm:ss:zzz");
     emit currentTimeChanged();
@@ -298,10 +326,10 @@ void SerialStudio::Communicator::updateCurrentTime()
  * If we reach the last CSV row, then simulation mode shall be disabled & a message-box
  * shall be shown to the user.
  */
-void SerialStudio::Communicator::sendSimulatedData()
+void CanSat::ControlPanel::sendSimulatedData()
 {
     // Stop if simulation mode is not active
-    if (!simulationActivated() || !connectedToSerialStudio())
+    if (!simulationActivated() || !SerialStudio::Plugin::instance().isConnected())
         return;
 
     // Read, validate & send current row data
@@ -327,6 +355,9 @@ void SerialStudio::Communicator::sendSimulatedData()
 
         // Increment row
         ++m_row;
+
+        // Llamar esta funcion en un segundo
+        QTimer::singleShot(1000, this, SLOT(sendSimulatedData()));
     }
 
     // Show CSV finished box & disable simulation mode
@@ -339,45 +370,74 @@ void SerialStudio::Communicator::sendSimulatedData()
 }
 
 /**
- * Waits 500 ms and notifies the UI if the TCP connection with Serial Studio has been
- * established.
- *
- * We need to wait in order to avoid 'flickering' in the UI when the plugin system of
- * Serial Studio is disabled.
+ * Writes the data of the given @a frame to its associated CSV file
  */
-void SerialStudio::Communicator::onConnectedChanged()
+void CanSat::ControlPanel::processFrame(const QByteArray &frame)
 {
-    QTimer::singleShot(500, this, &Communicator::connectedChanged);
-}
+    // Validate frame
+    if (frame.isEmpty())
+        return;
 
-/**
- * Displays any socket errors with a message-box
- */
-void SerialStudio::Communicator::onErrorOccurred(
-    const QAbstractSocket::SocketError socketError)
-{
-    Q_UNUSED(socketError);
-    Misc::Utilities::showMessageBox(tr("TCP socket error"), m_socket.errorString());
+    // Frame begins with 6026
+    if (frame.startsWith(QString("6026").toUtf8()))
+    {
+        // File is not open, create it
+        if (!m_payloadCsv.isOpen())
+        {
+            if (!createCsv(false))
+            {
+                Misc::Utilities::showMessageBox(tr("Error while creating payload CSV"),
+                                                m_payloadCsv.errorString());
+                return;
+            }
+        }
+
+        // Escribir datos al CSV
+        m_payloadCsv.write(frame);
+        m_payloadCsv.write("\n");
+    }
+
+    // Frame begins with 1026
+    else if (frame.startsWith(QString("1026").toUtf8()))
+    {
+        // File is not open, create it
+        if (!m_containerCsv.isOpen())
+        {
+            if (!createCsv(true))
+            {
+                Misc::Utilities::showMessageBox(tr("Error while creating container CSV"),
+                                                m_containerCsv.errorString());
+                return;
+            }
+        }
+
+        // Escribir datos al CSV
+        m_containerCsv.write(frame);
+        m_containerCsv.write("\n");
+    }
+
+    // Update user interface
+    Q_EMIT printLn("  [RX]\t" + QString::fromUtf8(frame));
 }
 
 /**
  * Sends the given @a data string to Serial Studio, which in turn sends the data through
  * the serial port.
  */
-bool SerialStudio::Communicator::sendData(const QString &data)
+bool CanSat::ControlPanel::sendData(const QString &data)
 {
     // Data is empty, abort
     if (data.isEmpty())
         return false;
 
     // We are not connected to Serial Studio, abort transmission
-    if (!connectedToSerialStudio())
+    if (!SerialStudio::Plugin::instance().isConnected())
         return false;
 
     // Define Xbee 64-bit address
     QByteArray address64bit;
-    address64bit.append((quint8)0x00); // 0x00
-    address64bit.append((quint8)0x13); // 0x13
+    address64bit.append((quint8)0x00); // 0x7D in XCTU
+    address64bit.append((quint8)0x13); // 0x33 in XCTU
     address64bit.append((quint8)0xA2);
     address64bit.append((quint8)0x00);
     address64bit.append((quint8)0x41);
@@ -414,7 +474,8 @@ bool SerialStudio::Communicator::sendData(const QString &data)
     // Calculate frame length
     quint16 length = frame.length() - 1;
 
-    // Cambiar primeros dos bytes de la direccion de 64 bits
+    // Replace first two bytes of 64-bit address after the CRC is calculated,
+    // for some unknown reason, the CRC needs to be calculated with non-MSB bytes
     QByteArray msbAddress;
     msbAddress.append((quint8)0x7D);
     msbAddress.append((quint8)0x33);
@@ -429,9 +490,49 @@ bool SerialStudio::Communicator::sendData(const QString &data)
     apiFrame.append((quint8)crc);
 
     // Send data to Serial Studio
-    auto bytes = m_socket.write(apiFrame);
-    Q_EMIT rx("TX: " + data + "\n");
+    Q_EMIT printLn("  [TX]\t" + data);
+    return SerialStudio::Plugin::instance().write(apiFrame);
+}
 
-    // Return operation status
-    return bytes == apiFrame.length();
+/**
+ * Creates a new CSV file with current date/time, the filaname of the created
+ * CSV file depends on the value of @a createContainerCsv
+ */
+bool CanSat::ControlPanel::createCsv(const bool createContainerCsv)
+{
+    // Get current date time
+    const auto dateTime = QDateTime::currentDateTime();
+
+    // Get file name
+    const QString title = createContainerCsv ? "Container" : "Payload";
+    const QString fileName = title + "_" + dateTime.toString("HH-mm-ss") + ".csv";
+
+    // Get path
+    const QString format = dateTime.toString("yyyy/MMM/dd/");
+    const QString path = QString("%1/Documents/%2/%3")
+                             .arg(QDir::homePath(), qApp->applicationName(), format);
+
+    // Generate file path if required
+    QDir dir(path);
+    if (!dir.exists())
+        dir.mkpath(".");
+
+    // Update UI
+    Q_EMIT printLn("[INFO]\tCreating new CSV file at " + dir.filePath(fileName));
+
+    // Create container CSV file
+    if (createContainerCsv)
+    {
+        m_containerCsv.close();
+        m_containerCsv.setFileName(dir.filePath(fileName));
+        return m_containerCsv.open(QFile::WriteOnly);
+    }
+
+    // Create payload CSV file
+    else
+    {
+        m_payloadCsv.close();
+        m_payloadCsv.setFileName(dir.filePath(fileName));
+        return m_payloadCsv.open(QFile::WriteOnly);
+    }
 }

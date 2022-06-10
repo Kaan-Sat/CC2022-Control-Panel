@@ -24,17 +24,13 @@
 
 #include <QFile>
 #include <QObject>
-#include <QTcpSocket>
 
-namespace SerialStudio
+namespace CanSat
 {
-class Communicator : public QObject
+class ControlPanel : public QObject
 {
     // clang-format off
     Q_OBJECT
-    Q_PROPERTY(bool connectedToSerialStudio
-               READ connectedToSerialStudio
-               NOTIFY connectedChanged)
     Q_PROPERTY(bool simulationEnabled
                READ simulationEnabled
                WRITE setSimulationMode
@@ -53,40 +49,40 @@ class Communicator : public QObject
     Q_PROPERTY(QString csvFileName
                READ csvFileName
                NOTIFY csvFileNameChanged)
+    Q_PROPERTY(bool simulationCsvLoaded
+               READ simulationCsvLoaded
+               NOTIFY csvFileNameChanged)
     // clang-format on
 
 Q_SIGNALS:
-    void connectedChanged();
     void currentTimeChanged();
     void csvFileNameChanged();
-    void rx(const QString &data);
+    void printLn(const QString &data);
     void simulationEnabledChanged();
     void simulationActivatedChanged();
     void containerTelemetryEnabledChanged();
 
 private:
-    Communicator();
-    Communicator(Communicator &&) = delete;
-    Communicator(const Communicator &) = delete;
-    Communicator &operator=(Communicator &&) = delete;
-    Communicator &operator=(const Communicator &) = delete;
+    ControlPanel();
+    ControlPanel(ControlPanel &&) = delete;
+    ControlPanel(const ControlPanel &) = delete;
+    ControlPanel &operator=(ControlPanel &&) = delete;
+    ControlPanel &operator=(const ControlPanel &) = delete;
 
 public:
-    static Communicator &instance();
+    static ControlPanel &instance();
 
 public:
-    bool connectedToSerialStudio() const;
-
     bool simulationEnabled() const;
     bool simulationActivated() const;
     bool containerTelemetryEnabled() const;
 
     QString currentTime() const;
     QString csvFileName() const;
+    bool simulationCsvLoaded() const;
 
 public slots:
     void openCsv();
-    void tryConnection();
     void updateContainerTime();
     void setSimulationMode(const bool enabled);
     void setSimulationActivated(const bool activated);
@@ -95,20 +91,23 @@ public slots:
 private slots:
     void updateCurrentTime();
     void sendSimulatedData();
-    void onConnectedChanged();
-    void onErrorOccurred(const QAbstractSocket::SocketError socketError);
+    void processFrame(const QByteArray &frame);
+    void onDataReceived(const QByteArray &data);
 
 private:
     bool sendData(const QString &data);
+    bool createCsv(const bool isContainer);
 
 private:
-    QTcpSocket m_socket;
-
     int m_row;
     QFile m_file;
     QFile m_tempFile;
     QString m_currentTime;
+    QByteArray m_dataBuffer;
     QList<QStringList> m_csvData;
+
+    QFile m_payloadCsv;
+    QFile m_containerCsv;
 
     bool m_simulationEnabled;
     bool m_simulationActivated;

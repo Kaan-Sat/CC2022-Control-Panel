@@ -96,7 +96,7 @@ Page {
             font.pixelSize: 22
             font.family: app.monoFont
             Layout.alignment: Qt.AlignVCenter
-            text: Cpp_SerialStudio_Communicator.currentTime
+            text: Cpp_CanSat_ControlPanel.currentTime
         }
 
         Item {
@@ -110,7 +110,7 @@ Page {
 
         Switch {
             Layout.alignment: Qt.AlignVCenter
-            checked: Cpp_SerialStudio_Communicator.connectedToSerialStudio
+            checked: Cpp_SerialStudio_Plugin.isConnected
 
             MouseArea {
                 anchors.fill: parent
@@ -140,14 +140,14 @@ Page {
                 Layout.fillWidth: true
                 icon.source: "qrc:/icons/cog.svg"
                 text: qsTr("Open simulation CSV")
-                onClicked: Cpp_SerialStudio_Communicator.openCsv()
+                onClicked: Cpp_CanSat_ControlPanel.openCsv()
             }
 
             Label {
                 Layout.fillWidth: true
                 verticalAlignment: Label.AlignVCenter
                 horizontalAlignment: Label.AlignHCenter
-                text: "<" + Cpp_SerialStudio_Communicator.csvFileName + ">"
+                text: "<" + Cpp_CanSat_ControlPanel.csvFileName + ">"
             }
         }
 
@@ -175,9 +175,9 @@ Page {
                 placeholderText: qsTr("No data received so far") + "..."
 
                 Connections {
-                    target: Cpp_SerialStudio_Communicator
-                    function onRx(data) {
-                        textArea.text += data
+                    target: Cpp_CanSat_ControlPanel
+                    function onPrintLn(line) {
+                        textArea.text += line + "\n"
                     }
                 }
 
@@ -209,9 +209,9 @@ Page {
                 id: simModeEnabled
                 text: qsTr("Simulation mode")
 
-                checked: Cpp_SerialStudio_Communicator.simulationEnabled
-                enabled: Cpp_SerialStudio_Communicator.connectedToSerialStudio
-                onClicked: Cpp_SerialStudio_Communicator.simulationEnabled = !Cpp_SerialStudio_Communicator.simulationEnabled
+                enabled: Cpp_SerialStudio_Plugin.isConnected
+                checked: Cpp_CanSat_ControlPanel.simulationEnabled
+                onClicked: Cpp_CanSat_ControlPanel.simulationEnabled = !Cpp_CanSat_ControlPanel.simulationEnabled
 
                 icon.width: 42
                 icon.height: 42
@@ -225,11 +225,11 @@ Page {
 
             Button {
                 id: activateSimMode
-                text: qsTr("Activate simulation mode")
+                text: checked ? qsTr("Disable simulation mode") : qsTr("Activate simulation mode")
 
-                enabled: simModeEnabled.checked && simModeEnabled.enabled
-                checked: Cpp_SerialStudio_Communicator.simulationActivated
-                onClicked: Cpp_SerialStudio_Communicator.simulationActivated = !Cpp_SerialStudio_Communicator.simulationActivated
+                checked: Cpp_CanSat_ControlPanel.simulationActivated
+                onClicked: Cpp_CanSat_ControlPanel.simulationActivated = !Cpp_CanSat_ControlPanel.simulationActivated
+                enabled: simModeEnabled.checked && simModeEnabled.enabled && Cpp_CanSat_ControlPanel.simulationCsvLoaded
 
                 icon.width: 42
                 icon.height: 42
@@ -246,9 +246,9 @@ Page {
 
                 text: qsTr("Container telemetry")
 
-                enabled: Cpp_SerialStudio_Communicator.connectedToSerialStudio
-                checked: Cpp_SerialStudio_Communicator.containerTelemetryEnabled
-                onClicked: Cpp_SerialStudio_Communicator.containerTelemetryEnabled = !Cpp_SerialStudio_Communicator.containerTelemetryEnabled
+                enabled: Cpp_SerialStudio_Plugin.isConnected
+                checked: Cpp_CanSat_ControlPanel.containerTelemetryEnabled
+                onClicked: Cpp_CanSat_ControlPanel.containerTelemetryEnabled = !Cpp_CanSat_ControlPanel.containerTelemetryEnabled
 
                 icon.width: 42
                 icon.height: 42
@@ -265,8 +265,8 @@ Page {
                 id: updateTime
                 text: qsTr("Update container time")
 
-                onClicked: Cpp_SerialStudio_Communicator.updateContainerTime()
-                enabled: Cpp_SerialStudio_Communicator.connectedToSerialStudio
+                enabled: Cpp_SerialStudio_Plugin.isConnected
+                onClicked: Cpp_CanSat_ControlPanel.updateContainerTime()
 
                 icon.width: 42
                 icon.height: 42

@@ -92,13 +92,15 @@ HEADERS += \
     src/AppInfo.h \
     src/Misc/Utilities.h \
     src/Misc/TimerEvents.h \
-    src/SerialStudio/Communicator.h
+    src/CanSat/ControlPanel.h \
+    src/SerialStudio/Plugin.h
 
 SOURCES += \
+    src/SerialStudio/Plugin.cpp \
     src/main.cpp \
     src/Misc/Utilities.cpp \
     src/Misc/TimerEvents.cpp \
-    src/SerialStudio/Communicator.cpp
+    src/CanSat/ControlPanel.cpp
 
 #-----------------------------------------------------------------------------------------
 # Deploy files

@@ -30,7 +30,8 @@
 #include <AppInfo.h>
 #include <Misc/Utilities.h>
 #include <Misc/TimerEvents.h>
-#include <SerialStudio/Communicator.h>
+#include <CanSat/ControlPanel.h>
+#include <SerialStudio/Plugin.h>
 
 #ifdef Q_OS_WIN
 #    include <windows.h>
@@ -70,18 +71,20 @@ int main(int argc, char **argv)
     QQmlApplicationEngine engine;
     auto utilities = &Misc::Utilities::instance();
     auto timerEvents = &Misc::TimerEvents::instance();
-    auto ssCommunicator = &SerialStudio::Communicator::instance();
+    auto plugin = &SerialStudio::Plugin::instance();
+    auto controlPanel = &CanSat::ControlPanel::instance();
 
     // Init QML interface
     auto c = engine.rootContext();
     QQuickStyle::setStyle("Material");
-    c->setContextProperty("Cpp_Misc_Utilities", utilities);
     c->setContextProperty("Cpp_AppIcon", "qrc" APP_ICON);
+    c->setContextProperty("Cpp_Misc_Utilities", utilities);
+    c->setContextProperty("Cpp_SerialStudio_Plugin", plugin);
     c->setContextProperty("Cpp_Misc_TimerEvents", timerEvents);
     c->setContextProperty("Cpp_AppName", app.applicationName());
+    c->setContextProperty("Cpp_CanSat_ControlPanel", controlPanel);
     c->setContextProperty("Cpp_AppVersion", app.applicationVersion());
     c->setContextProperty("Cpp_AppOrganization", app.organizationName());
-    c->setContextProperty("Cpp_SerialStudio_Communicator", ssCommunicator);
     c->setContextProperty("Cpp_AppOrganizationDomain", app.organizationDomain());
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
 
