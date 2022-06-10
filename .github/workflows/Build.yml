@@ -20,7 +20,7 @@ env:
   VERSION: "1.0.0"
   EXECUTABLE: "CC2022"
   APPLICATION: "CC2022 Control Panel"
-  UNIXNAME: "cc2022"
+  UNIXNAME: "CC2022"
   QMAKE_PROJECT: "CC2022.pro"
   QML_DIR_NIX: "assets/qml"
   QML_DIR_WIN: "assets\\qml"
@@ -41,6 +41,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-20.04
     name: '🐧 Ubuntu 20.04'
+    if: ${{ false }}
     steps:
 
     - name: '🧰 Checkout'
@@ -208,103 +209,6 @@ jobs:
       with:
         name: ${{env.EXECUTABLE}}-${{env.VERSION}}-Windows.exe
         path: deploy/windows/nsis/${{env.EXECUTABLE}}-${{env.VERSION}}-Windows.exe
-
-  #
-  # Windows MSYS2 build
-  #
-  msys2-makepkg:
-    if: ${{false}}
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { icon: '🟪', msystem: MINGW64, arch: x86_64 }
-          - { icon: '🟦', msystem: MINGW32, arch: i686   }
-    name:  ${{ matrix.icon }} ${{ matrix.msystem }} | ${{ matrix.arch }} | makepkg
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-
-    - run: git config --global core.autocrlf input
-      shell: bash
-
-    - name: '🧰 Checkout'
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-        submodules: recursive
-
-    - name: '${{ matrix.icon }} Setup MSYS2'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: ${{ matrix.msystem }}
-        update: true
-        install: >
-          base-devel
-          mingw-w64-${{ matrix.arch }}-toolchain
-
-    - name: '🚧 Build'
-      run: |
-        cd msys2
-        tries=0
-        # Try building three times due to the arbitrary 'Bad address' error
-        while [ $tries -lt 3 ]; do
-          makepkg-mingw --noconfirm --noprogressbar -sCLf && break || tries=$((tries+1))
-        done
-
-      env:
-        MINGW_INSTALLS: ${{ matrix.msystem }}
-
-    - name: '📤 Upload artifact: MSYS2 ${{ matrix.arch }} package'
-      uses: actions/upload-artifact@v2
-      with:
-        name: msys2-pkgs
-        path: msys2/*.zst
-
-  # Test Windows MSYS2 packages
-  msys2-test:
-    if: ${{false}}
-    needs: msys2-makepkg
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { icon: '🟪', msystem: MINGW64, arch: x86_64 }
-          - { icon: '🟦', msystem: MINGW32, arch: i686   }
-    name: ${{ matrix.icon }} ${{ matrix.msystem }} | ${{ matrix.arch }} | Test
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-
-    - name: '${{ matrix.icon }} Setup MSYS2'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: ${{ matrix.msystem }}
-        update: true
-        install: >
-          tree
-          tar
-          zstd
-
-    - name: '📥 Download artifacts: MSYS2 packages'
-      uses: actions/download-artifact@v2
-      with:
-        name: msys2-pkgs
-
-    - name: 'Install MSYS2 package'
-      run: |
-        pacman -U --noconfirm --noprogressbar *${{ matrix.arch }}*.zst
-
-    - name: 'List contents of package'
-      run: |
-        mkdir tmp
-        cd tmp
-        /usr/bin/tar xf ../*${{ matrix.arch }}*.zst
-        tree ${{ matrix.msystem }}
   
   #
   # Upload continuous build
@@ -312,7 +216,6 @@ jobs:
   upload:
       name: '🗂 Create release and upload artifacts'
       needs:
-        - build-linux
         - build-mac
         - build-windows
       runs-on: ubuntu-latest
@@ -327,6 +230,6 @@ jobs:
         run: |
             wget -q https://github.com/TheAssassin/pyuploadtool/releases/download/continuous/pyuploadtool-x86_64.AppImage
             chmod +x pyuploadtool-x86_64.AppImage
-            ./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-Linux.AppImage
+            ##./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-Linux.AppImage
             ./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-macOS.zip
             ./pyuploadtool-x86_64.AppImage **/${{env.EXECUTABLE}}-${{env.VERSION}}-Windows.exe
