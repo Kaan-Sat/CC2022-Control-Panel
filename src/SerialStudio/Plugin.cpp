@@ -94,7 +94,9 @@ void SerialStudio::Plugin::tryConnection()
  */
 void SerialStudio::Plugin::onDataReceived()
 {
-    auto json = QJsonDocument::fromJson(m_socket.readAll());
+    auto recv = m_socket.readAll();
+    auto json = QJsonDocument::fromJson(recv);
+
     if (!json.isEmpty())
     {
         auto base64 = json.object().value("data").toString();
@@ -112,6 +114,11 @@ void SerialStudio::Plugin::onDataReceived()
  */
 void SerialStudio::Plugin::onConnectedChanged()
 {
+    if (isConnected())
+        Q_EMIT printLn("[INFO] TCP connection established");
+    else
+        Q_EMIT printLn("[WARN] TCP connection closed");
+
     QTimer::singleShot(500, this, &Plugin::connectedChanged);
 }
 
@@ -121,5 +128,6 @@ void SerialStudio::Plugin::onConnectedChanged()
 void SerialStudio::Plugin::onErrorOccurred(const QAbstractSocket::SocketError socketError)
 {
     Q_UNUSED(socketError);
+    Q_EMIT printLn("[WARN] TCP socket error: " + m_socket.errorString());
     Misc::Utilities::showMessageBox(tr("TCP socket error"), m_socket.errorString());
 }

@@ -57,8 +57,8 @@ class ControlPanel : public QObject
 Q_SIGNALS:
     void currentTimeChanged();
     void csvFileNameChanged();
-    void printLn(const QString &data);
     void simulationEnabledChanged();
+    void printLn(const QString &line);
     void simulationActivatedChanged();
     void containerTelemetryEnabledChanged();
 

@@ -38,6 +38,7 @@ class Plugin : public QObject
 
 Q_SIGNALS:
     void connectedChanged();
+    void printLn(const QString &line);
     void dataReceived(const QByteArray &data);
 
 private:

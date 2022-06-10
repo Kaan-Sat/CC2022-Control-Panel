@@ -172,12 +172,20 @@ Page {
                 textFormat: Text.PlainText
                 width: scrollView.contentWidth
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                placeholderText: qsTr("No data received so far") + "..."
+                text: qsTr(" Welcome to %1 v%2!\n").arg(Cpp_AppName).arg(Cpp_AppVersion) +
+                      qsTr(" Copyright (c) 2022 the Ka'an Sat Team. Released under the MIT license.\n\n")
 
                 Connections {
                     target: Cpp_CanSat_ControlPanel
                     function onPrintLn(line) {
-                        textArea.text += line + "\n"
+                        textArea.text += " [Control Panel] " + line + "\n"
+                    }
+                }
+
+                Connections {
+                    target: Cpp_SerialStudio_Plugin
+                    function onPrintLn(line) {
+                        textArea.text += " [Serial Studio] " + line + "\n"
                     }
                 }
 

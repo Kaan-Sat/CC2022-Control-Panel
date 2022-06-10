@@ -186,8 +186,8 @@ void CanSat::ControlPanel::openCsv()
         }
 
         // Update UI
-        Q_EMIT printLn("[INFO]\tLoaded simulation CSV file from " + m_file.fileName());
-        Q_EMIT printLn("[INFO]\tProcessed simulation CSV saved at "
+        Q_EMIT printLn("[INFO] Loaded simulation CSV file from " + m_file.fileName());
+        Q_EMIT printLn("[INFO] Processed simulation CSV saved at "
                        + m_tempFile.fileName());
     }
 
@@ -243,7 +243,7 @@ void CanSat::ControlPanel::setSimulationActivated(const bool activated)
             m_simulationActivated = true;
             emit simulationActivatedChanged();
             sendData("CMD,1026,SIM,ACTIVATE;");
-            Q_EMIT printLn("[INFO]\tWating 5 seconds before sending data...");
+            Q_EMIT printLn("[INFO] Wating 5 seconds before sending data...");
             QTimer::singleShot(5000, this, SLOT(sendSimulatedData()));
         }
 
@@ -417,7 +417,7 @@ void CanSat::ControlPanel::processFrame(const QByteArray &frame)
     }
 
     // Update user interface
-    Q_EMIT printLn("  [RX]\t" + QString::fromUtf8(frame));
+    Q_EMIT printLn("  [RX] " + QString::fromUtf8(frame));
 }
 
 /**
@@ -490,7 +490,7 @@ bool CanSat::ControlPanel::sendData(const QString &data)
     apiFrame.append((quint8)crc);
 
     // Send data to Serial Studio
-    Q_EMIT printLn("  [TX]\t" + data);
+    Q_EMIT printLn("  [TX] " + data);
     return SerialStudio::Plugin::instance().write(apiFrame);
 }
 
@@ -518,7 +518,7 @@ bool CanSat::ControlPanel::createCsv(const bool createContainerCsv)
         dir.mkpath(".");
 
     // Update UI
-    Q_EMIT printLn("[INFO]\tCreating new CSV file at " + dir.filePath(fileName));
+    Q_EMIT printLn("[INFO] Creating new CSV file at " + dir.filePath(fileName));
 
     // Create container CSV file
     if (createContainerCsv)
