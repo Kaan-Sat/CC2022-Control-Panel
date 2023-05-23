@@ -38,7 +38,7 @@
 #endif
 
 /**
- * @brief Entry-point function of the applicatio n
+ * @brief Entry-point function of the application
  *
  * @param argc argument count
  * @param argv argument data
