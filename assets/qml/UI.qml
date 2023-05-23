@@ -172,8 +172,8 @@ Page {
                 textFormat: Text.PlainText
                 width: scrollView.contentWidth
                 wrapMode: Text.WrapAtWordBoundaryOrAnywhere
-                text: qsTr(" Welcome to the %1 v%2!\n").arg(Cpp_AppName).arg(Cpp_AppVersion) +
-                      qsTr(" Copyright (c) 2022 the Ka'an Sat Team. Released under the MIT License.\n\n")
+                text: qsTr("\n Welcome to the %1 v%2!\n").arg(Cpp_AppName).arg(Cpp_AppVersion) +
+                      qsTr(" Copyright (c) 2023 the Ka'an Sat Team. Released under the MIT License.\n\n")
 
                 Connections {
                     target: Cpp_CanSat_ControlPanel
@@ -207,7 +207,7 @@ Page {
         //
         GridLayout {
             id: grid
-            columns: 2
+            columns: 3
             Layout.fillWidth: true
             Layout.fillHeight: true
             rowSpacing: app.spacing
@@ -280,6 +280,40 @@ Page {
                 icon.height: 42
                 font.pixelSize: 16
                 icon.source: "qrc:/icons/time.svg"
+
+                Layout.fillWidth: true
+                Layout.minimumHeight: 64
+                Layout.maximumHeight: 64
+            }
+
+            Button {
+                id: updateTimeGPS
+                text: qsTr("Update container time GPS")
+
+                enabled: Cpp_SerialStudio_Plugin.isConnected
+                onClicked: Cpp_CanSat_ControlPanel.updateContainerTimeGPS()
+
+                icon.width: 42
+                icon.height: 42
+                font.pixelSize: 16 //tamaño de letra
+                icon.source: "qrc:/icons/radar.svg"
+
+                Layout.fillWidth: true
+                Layout.minimumHeight: 64
+                Layout.maximumHeight: 64
+            }
+
+            Button {
+                id: calibrateAltitude
+                text: qsTr("Calibrate Altitude to Zero")
+
+                enabled: Cpp_SerialStudio_Plugin.isConnected
+                onClicked: Cpp_CanSat_ControlPanel.calibrateAltitude()
+
+                icon.width: 42
+                icon.height: 42
+                font.pixelSize: 16 //tamaño de letra
+                icon.source: "qrc:/icons/build.svg"
 
                 Layout.fillWidth: true
                 Layout.minimumHeight: 64

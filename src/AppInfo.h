@@ -28,6 +28,6 @@
 // clang-format off
 #define APP_VERSION     "1.0.0"
 #define APP_DEVELOPER   "Ka'an Sat"
-#define APP_NAME        "CC2022 Control Panel"
+#define APP_NAME        "CC2023 Control Panel"
 #define APP_ICON        ":/images/icon.svg"
 // clang-format on

@@ -32,26 +32,26 @@ class ControlPanel : public QObject
     // clang-format off
     Q_OBJECT
     Q_PROPERTY(bool simulationEnabled
-               READ simulationEnabled
-               WRITE setSimulationMode
-               NOTIFY simulationEnabledChanged)
+                   READ simulationEnabled
+                       WRITE setSimulationMode
+                           NOTIFY simulationEnabledChanged)
     Q_PROPERTY(bool simulationActivated
-               READ simulationActivated
-               WRITE setSimulationActivated
-               NOTIFY simulationActivatedChanged)
+                   READ simulationActivated
+                       WRITE setSimulationActivated
+                           NOTIFY simulationActivatedChanged)
     Q_PROPERTY(bool containerTelemetryEnabled
-               READ containerTelemetryEnabled
-               WRITE setContainerTelemetryEnabled
-               NOTIFY containerTelemetryEnabledChanged)
+                   READ containerTelemetryEnabled
+                       WRITE setContainerTelemetryEnabled
+                           NOTIFY containerTelemetryEnabledChanged)
     Q_PROPERTY(QString currentTime
-               READ currentTime
-               NOTIFY currentTimeChanged)
+                   READ currentTime
+                       NOTIFY currentTimeChanged)
     Q_PROPERTY(QString csvFileName
-               READ csvFileName
-               NOTIFY csvFileNameChanged)
+                   READ csvFileName
+                       NOTIFY csvFileNameChanged)
     Q_PROPERTY(bool simulationCsvLoaded
-               READ simulationCsvLoaded
-               NOTIFY csvFileNameChanged)
+                   READ simulationCsvLoaded
+                       NOTIFY csvFileNameChanged)
     // clang-format on
 
 Q_SIGNALS:
@@ -84,6 +84,8 @@ public:
 public slots:
     void openCsv();
     void updateContainerTime();
+    void updateContainerTimeGPS();
+    void calibrateAltitude();
     void setSimulationMode(const bool enabled);
     void setSimulationActivated(const bool activated);
     void setContainerTelemetryEnabled(const bool enabled);
@@ -113,4 +115,4 @@ private:
     bool m_simulationActivated;
     bool m_containerTelemetryEnabled;
 };
-};
+}
