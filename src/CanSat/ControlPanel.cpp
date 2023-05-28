@@ -47,12 +47,12 @@ CanSat::ControlPanel::ControlPanel()
     m_simulationActivated = false;
     m_containerTelemetryEnabled = false;
 
-           // Timer module signals/slots
+    // Timer module signals/slots
     auto te = &(Misc::TimerEvents::instance());
     connect(te, &Misc::TimerEvents::timeout20Hz, this,
             &CanSat::ControlPanel::updateCurrentTime);
 
-           // Plugins comm signals/slots
+    // Plugins comm signals/slots
     auto pc = &(SerialStudio::Plugin::instance());
     connect(pc, &SerialStudio::Plugin::dataReceived, this,
             &CanSat::ControlPanel::onDataReceived);
@@ -133,15 +133,15 @@ void CanSat::ControlPanel::openCsv()
                                              QDir::homePath());
     // clang-format on
 
-           // User did not select a file, abort
+    // User did not select a file, abort
     if (name.isEmpty())
         return;
 
-           // Close current file
+    // Close current file
     if (m_file.isOpen())
         m_file.close();
 
-           // Open the selected file
+    // Open the selected file
     m_file.setFileName(name);
     if (m_file.open(QFile::ReadOnly))
     {
@@ -149,11 +149,11 @@ void CanSat::ControlPanel::openCsv()
         if (m_tempFile.isOpen())
             m_tempFile.close();
 
-               // Disable simulation mode
+        // Disable simulation mode
         if (simulationActivated())
             setSimulationActivated(false);
 
-               // Generate CSV data
+        // Generate CSV data
         QString csv;
         QTextStream in(&m_file);
         while (!in.atEnd())
@@ -170,7 +170,7 @@ void CanSat::ControlPanel::openCsv()
             }
         }
 
-               // Save CSV file to temp path
+        // Save CSV file to temp path
         m_tempFile.setFileName(QDir::tempPath() + "/CC2023_temp.csv");
         if (m_tempFile.open(QFile::WriteOnly))
         {
@@ -178,24 +178,24 @@ void CanSat::ControlPanel::openCsv()
             m_tempFile.close();
         }
 
-               // Read CSV data
+        // Read CSV data
         if (m_tempFile.open(QFile::ReadOnly))
         {
             m_row = 1;
             m_csvData = QtCSV::Reader::readToList(m_tempFile);
         }
 
-               // Update UI
+        // Update UI
         Q_EMIT printLn("[INFO] Loaded simulation CSV file from " + m_file.fileName());
         Q_EMIT printLn("[INFO] Processed simulation CSV saved at "
                        + m_tempFile.fileName());
     }
 
-           // Open failure, alert user through a messagebox
+    // Open failure, alert user through a messagebox
     else
         Misc::Utilities::showMessageBox(tr("File open error"), m_file.errorString());
 
-           // Update UI
+    // Update UI
     emit csvFileNameChanged();
 }
 
@@ -226,7 +226,6 @@ void CanSat::ControlPanel::calibrateAltitude()
         sendData("CMD,1099,CAL,00;");
     }
 }
-
 
 /**
  * Enables/disables simulation mode
@@ -295,7 +294,7 @@ void CanSat::ControlPanel::onDataReceived(const QByteArray &data)
     // Append data to buffer
     m_dataBuffer.append(data);
 
-           // Read until start/finish combinations are not found
+    // Read until start/finish combinations are not found
     auto bytes = 0;
     auto cursor = m_dataBuffer;
     auto start = QString("/*").toUtf8();
@@ -307,22 +306,22 @@ void CanSat::ControlPanel::onDataReceived(const QByteArray &data)
         cursor = cursor.mid(sIndex + start.length(), -1);
         bytes += sIndex + start.length();
 
-               // Copy a sub-buffer that goes until the finish sequence
+        // Copy a sub-buffer that goes until the finish sequence
         auto fIndex = cursor.indexOf(finish);
         auto frame = cursor.left(fIndex);
 
-               // Process frame data
+        // Process frame data
         processFrame(frame);
 
-               // Remove the data including the finish sequence from the master buffer
+        // Remove the data including the finish sequence from the master buffer
         cursor = cursor.mid(fIndex, -1);
         bytes += fIndex + finish.length();
     }
 
-           // Remove parsed data from master buffer
+    // Remove parsed data from master buffer
     m_dataBuffer.remove(0, bytes);
 
-           // Clear temp. buffer (e.g. device sends a lot of invalid data)
+    // Clear temp. buffer (e.g. device sends a lot of invalid data)
     if (m_dataBuffer.size() > 1024 * 10 * 10)
         m_dataBuffer.clear();
 }
@@ -349,35 +348,35 @@ void CanSat::ControlPanel::sendSimulatedData()
     if (!simulationActivated() || !SerialStudio::Plugin::instance().isConnected())
         return;
 
-           // Read, validate & send current row data
+    // Read, validate & send current row data
     if (m_row < m_csvData.count() && m_row >= 0)
     {
         // Get CSV row data
         auto row = m_csvData.at(m_row);
 
-               // Generate row string
+        // Generate row string
         QString cmd = "CMD,1099,SIMP,";
         cmd.append(row.first());
         cmd.append(";");
 
-               // Send command
+        // Send command
         if (!cmd.isEmpty())
             sendData(cmd);
 
-               // Column count invalid
+        // Column count invalid
         else
             Misc::Utilities::showMessageBox(
                 tr("Simulation CSV error"),
                 tr("Invalid column count at row %1").arg(m_row));
 
-               // Increment row
+        // Increment row
         ++m_row;
 
-               // Llamar esta funcion en un segundo
+        // Llamar esta funcion en un segundo
         QTimer::singleShot(1000, this, SLOT(sendSimulatedData()));
     }
 
-           // Show CSV finished box & disable simulation mode
+    // Show CSV finished box & disable simulation mode
     else
     {
         setSimulationActivated(false);
@@ -396,7 +395,7 @@ void CanSat::ControlPanel::processFrame(const QByteArray &frame)
     if (frame.isEmpty())
         return;
 
-           // Frame begins with 6026
+    // Frame begins with 6026
     if (frame.startsWith(QString("6026").toUtf8()))
     {
         // File is not open, create it
@@ -410,12 +409,12 @@ void CanSat::ControlPanel::processFrame(const QByteArray &frame)
             }
         }
 
-               // Escribir datos al CSV
+        // Escribir datos al CSV
         m_payloadCsv.write(frame);
         m_payloadCsv.write("\n");
     }
 
-           // Frame begins with 1099
+    // Frame begins with 1099
     else if (frame.startsWith(QString("1099").toUtf8()))
     {
         // File is not open, create it
@@ -429,12 +428,12 @@ void CanSat::ControlPanel::processFrame(const QByteArray &frame)
             }
         }
 
-               // Escribir datos al CSV
+        // Escribir datos al CSV
         m_containerCsv.write(frame);
         m_containerCsv.write("\n");
     }
 
-           // Update user interface
+    // Update user interface
     Q_EMIT printLn("  [RX] " + QString::fromUtf8(frame));
 }
 
@@ -448,11 +447,11 @@ bool CanSat::ControlPanel::sendData(const QString &data)
     if (data.isEmpty())
         return false;
 
-           // We are not connected to Serial Studio, abort transmission
+    // We are not connected to Serial Studio, abort transmission
     if (!SerialStudio::Plugin::instance().isConnected())
         return false;
 
-           // Define Xbee 64-bit destination address
+    // Define Xbee 64-bit destination address
     QByteArray address64bit;
     // address64bit.append((quint8)0x00); // 0x7D in XCTU
     address64bit.append((quint8)0x13);
@@ -463,12 +462,12 @@ bool CanSat::ControlPanel::sendData(const QString &data)
     address64bit.append((quint8)0xA6);
     address64bit.append((quint8)0x1F);
 
-           // Define Xbee 16-bit address
+    // Define Xbee 16-bit address
     QByteArray address16bit;
     address16bit.append((quint8)0xFF);
     address16bit.append((quint8)0xFE);
 
-           // Begin constructing Xbee API frame     -Don't move-
+    // Begin constructing Xbee API frame     -Don't move-
     QByteArray frame;
     frame.append((quint8)0x10); // Transmit request
     frame.append((quint8)0x01); // No acknowledgement
@@ -478,28 +477,28 @@ bool CanSat::ControlPanel::sendData(const QString &data)
     frame.append((quint8)0x00); // Broadcast radio
     frame.append((quint8)0x00); // Options
 
-           // Add data to frame
+    // Add data to frame
     frame.append(data.toUtf8());
 
-           // Calculate sum
+    // Calculate sum
     quint16 sum = 0;
     for (auto i = 0; i < frame.length(); ++i)
         sum += (quint8)frame[i];
 
-           // Calculate checksum
+    // Calculate checksum
     quint8 crc = 0xff - ((sum)&0xFF);
 
-           // Calculate frame length
+    // Calculate frame length
     quint16 length = frame.length();
 
-           // Replace first two bytes of 64-bit address after the CRC is calculated,
-           // for some unknown reason, the CRC needs to be calculated with non-MSB bytes
+    // Replace first two bytes of 64-bit address after the CRC is calculated,
+    // for some unknown reason, the CRC needs to be calculated with non-MSB bytes
     //    QByteArray msbAddress;
     //  msbAddress.append((quint8)0x13);
     // msbAddress.append((quint8)0xA2);
     // frame = frame.replace(3, 2, msbAddress);
 
-           // Generate full frame   -Don't move-
+    // Generate full frame   -Don't move-
     QByteArray apiFrame;
     apiFrame.append((quint8)0x7E);
     apiFrame.append((quint8)((length) >> 8) & 0xff);
@@ -507,9 +506,9 @@ bool CanSat::ControlPanel::sendData(const QString &data)
     apiFrame.append(frame);
     apiFrame.append((quint8)crc);
 
-           //  qDebug() << apiFrame.toHex(); //imprime el hexadecimal de envio a XBee
+    //  qDebug() << apiFrame.toHex(); //imprime el hexadecimal de envio a XBee
 
-           // Send data to Serial Studio
+    // Send data to Serial Studio
     Q_EMIT printLn("  [TX] " + data);
     return SerialStudio::Plugin::instance().write(apiFrame);
 }
@@ -523,24 +522,24 @@ bool CanSat::ControlPanel::createCsv(const bool createContainerCsv)
     // Get current date time
     const auto dateTime = QDateTime::currentDateTime();
 
-           // Get file name
+    // Get file name
     const QString title = createContainerCsv ? "Container" : "Payload";
     const QString fileName = title + "_" + dateTime.toString("HH-mm-ss") + ".csv";
 
-           // Get path
+    // Get path
     const QString format = dateTime.toString("yyyy/MMM/dd/");
     const QString path = QString("%1/Documents/%2/%3")
                              .arg(QDir::homePath(), qApp->applicationName(), format);
 
-           // Generate file path if required
+    // Generate file path if required
     QDir dir(path);
     if (!dir.exists())
         dir.mkpath(".");
 
-           // Update UI
+    // Update UI
     Q_EMIT printLn("[INFO] Creating new CSV file at " + dir.filePath(fileName));
 
-           // Create container CSV file
+    // Create container CSV file
     if (createContainerCsv)
     {
         m_containerCsv.close();
@@ -548,7 +547,7 @@ bool CanSat::ControlPanel::createCsv(const bool createContainerCsv)
         return m_containerCsv.open(QFile::WriteOnly);
     }
 
-           // Create payload CSV file
+    // Create payload CSV file
     else
     {
         m_payloadCsv.close();
