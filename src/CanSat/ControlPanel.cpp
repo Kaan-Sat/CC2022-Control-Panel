@@ -460,7 +460,7 @@ bool CanSat::ControlPanel::sendData(const QString &data)
     address64bit.append((quint8)0x41);
     address64bit.append((quint8)0x83);
     address64bit.append((quint8)0xA6);
-    address64bit.append((quint8)0x1F);
+    address64bit.append((quint8)0x26);
 
     // Define Xbee 16-bit address
     QByteArray address16bit;
